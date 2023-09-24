@@ -1,0 +1,18 @@
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:7.0 AS build-env
+WORKDIR /app
+
+ARG TARGETARCH
+ARG BUILDPLATFORM
+
+# Copy everything
+COPY ./job/. ./
+# Restore as distinct layers
+RUN dotnet restore -a $TARGETARCH
+# Build and publish a release
+RUN dotnet publish -c Release -o published -a $TARGETARCH --no-restore
+
+# Build runtime image
+FROM mcr.microsoft.com/dotnet/runtime:7.0
+WORKDIR /app
+COPY --from=build-env /app/published .
+ENTRYPOINT ["dotnet", "job.dll"]
